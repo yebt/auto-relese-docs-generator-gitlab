@@ -72,7 +72,7 @@ class ChangelogGenerator:
         spinner.start()
         
         try:
-            tags = self.project.tags.list(order_by='updated', sort='desc', per_page=2)
+            tags = self.project.tags.list(order_by='updated', sort='desc', per_page=2, get_all=False)
             
             if len(tags) < 2:
                 spinner.fail('Not enough tags found. Need at least 2 tags.')
@@ -143,14 +143,14 @@ class ChangelogGenerator:
                 diff = full_commit.diff()
                 
                 commit_info = {
-                    'id': commit.id[:8],
-                    'full_id': commit.id,
-                    'message': commit.message,
-                    'title': commit.title,
-                    'author': commit.author_name,
-                    'date': commit.created_at,
+                    'id': full_commit.id[:8],
+                    'full_id': full_commit.id,
+                    'message': full_commit.message,
+                    'title': full_commit.title,
+                    'author': full_commit.author_name,
+                    'date': full_commit.created_at,
                     'diff': diff,
-                    'stats': commit.stats
+                    'stats': full_commit.stats
                 }
                 
                 commit_details.append(commit_info)
