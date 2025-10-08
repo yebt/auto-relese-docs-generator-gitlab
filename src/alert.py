@@ -60,16 +60,6 @@ class Alert:
     def print_header():
         header = [
             "",
-            "   JJ          JJ   ",
-            "  JJJ          JJC  ",
-            "  JCJJ        JJJJ  ",
-            " JJJJJJ      UJCJJJ ",
-            "}}rxrxrJJJJJJxrrxr}}",
-            "}}}{rrxcJJJJzrxr{}}}",
-            " }}}}rrxJJCJrrr}}}[ ",
-            "   [}}jrnJJxxj}}[   ",
-            "      }}rXXx}}      ",
-            "        [tj[        ",
         ]
         print("\n\t\033[38;5;166m".join(header))
         print("\033[0m")
