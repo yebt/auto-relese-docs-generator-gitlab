@@ -88,39 +88,26 @@ class ChangelogGenerator:
             raise
     
     def get_commits_between_tags(self, tag1: str, tag2: str) -> List[Dict]:
-        """Get all commits between two tags"""
+        """Get only the new commits introduced between two tags (tag2..tag1)"""
         spinner = Halo(text=f'Fetching commits between {tag2} and {tag1}...', spinner='dots')
         spinner.start()
         
         try:
-            # Get commit SHAs for both tags
-            tag1_commit = self.project.tags.get(tag1).commit['id']
-            tag2_commit = self.project.tags.get(tag2).commit['id']
+            # Use GitLab's compare API to get only commits between the two tags
+            # This returns commits that are in tag1 but not in tag2 (the new commits)
+            comparison = self.project.repository_compare(tag2, tag1)
             
-            # Get commits
-            commits = self.project.commits.list(
-                ref_name=tag1,
-                all=True,
-                get_all=True
-            )
+            # Get the commit objects from the comparison
+            commit_shas = [commit['id'] for commit in comparison['commits']]
             
-            # Filter commits between the two tags
-            filtered_commits = []
-            found_latest = False
+            # Fetch full commit objects
+            commits = []
+            for sha in commit_shas:
+                commit = self.project.commits.get(sha)
+                commits.append(commit)
             
-            for commit in commits:
-                if commit.id == tag1_commit:
-                    found_latest = True
-                    filtered_commits.append(commit)
-                    continue
-                
-                if found_latest:
-                    if commit.id == tag2_commit:
-                        break
-                    filtered_commits.append(commit)
-            
-            spinner.succeed(f'Found {len(filtered_commits)} commits between tags')
-            return filtered_commits
+            spinner.succeed(f'Found {len(commits)} new commits between {tag2} and {tag1}')
+            return commits
         except Exception as e:
             spinner.fail(f'Failed to fetch commits: {str(e)}')
             raise
