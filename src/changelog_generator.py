@@ -80,8 +80,14 @@ class ChangelogGenerator:
             
             latest_tag = tags[0].name
             previous_tag = tags[1].name
+            latest_commit = tags[0].commit['id'][:8]
+            previous_commit = tags[1].commit['id'][:8]
             
             spinner.succeed(f'Found tags: {latest_tag} (latest) and {previous_tag} (previous)')
+            print(f"   🏷️  {previous_tag} → commit {previous_commit}")
+            print(f"   🏷️  {latest_tag} → commit {latest_commit}")
+            print(f"   📊 Comparing: {previous_tag}..{latest_tag}\n")
+            
             return latest_tag, previous_tag
         except Exception as e:
             spinner.fail(f'Failed to fetch tags: {str(e)}')
@@ -107,6 +113,16 @@ class ChangelogGenerator:
                 commits.append(commit)
             
             spinner.succeed(f'Found {len(commits)} new commits between {tag2} and {tag1}')
+            
+            # Display commit hashes for visual verification
+            if commits:
+                print(f"\n📋 Commits to be analyzed ({len(commits)}):")
+                for i, commit in enumerate(commits, 1):
+                    short_hash = commit.id[:8]
+                    title = commit.title[:60] + '...' if len(commit.title) > 60 else commit.title
+                    print(f"   {i}. {short_hash} - {title}")
+                print()
+            
             return commits
         except Exception as e:
             spinner.fail(f'Failed to fetch commits: {str(e)}')
