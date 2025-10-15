@@ -11,12 +11,13 @@ from google import genai
 from google.genai import types
 from halo import Halo
 from dotenv import load_dotenv
+import argparse
 
 
 class ChangelogGenerator:
     """
     Generates commercial and technical changelogs from GitLab repository
-    using Gemini AI to analyze commits between the last two tags.
+    using Gemini AI to analyze commits between specified tags or last two tags.
     """
     
     def __init__(self):
@@ -66,42 +67,74 @@ class ChangelogGenerator:
             spinner.fail(f'Failed to connect to Gemini AI: {str(e)}')
             raise
     
-    def get_last_two_tags(self) -> Tuple[str, str]:
-        """Get the last two tags from the repository"""
+    def get_tags(self, from_tag: str = None, to_tag: str = None) -> Tuple[str, str]:
+        """Get the tags for changelog generation based on input parameters"""
         spinner = Halo(text='Fetching repository tags...', spinner='dots')
         spinner.start()
         
         try:
-            tags = self.project.tags.list(order_by='updated', sort='desc', per_page=2, get_all=False)
+            # Get all tags sorted by updated desc
+            tags = self.project.tags.list(order_by='updated', sort='desc', get_all=True)
+            tag_names = [t.name for t in tags]
             
-            if len(tags) < 2:
-                spinner.fail('Not enough tags found. Need at least 2 tags.')
-                raise ValueError('Repository must have at least 2 tags')
+            if from_tag is None and to_tag is None:
+                if len(tag_names) < 2:
+                    spinner.fail('Not enough tags found. Need at least 2 tags.')
+                    raise ValueError('Repository must have at least 2 tags')
+                from_tag = tag_names[1]  # older
+                to_tag = tag_names[0]  # newer
+            elif to_tag is not None and from_tag is None:
+                if to_tag not in tag_names:
+                    spinner.fail(f'Tag {to_tag} not found')
+                    raise ValueError(f'Tag {to_tag} not found')
+                idx = tag_names.index(to_tag)
+                if idx + 1 >= len(tag_names):
+                    spinner.fail(f'No previous tag found before {to_tag}')
+                    raise ValueError(f'No previous tag found before {to_tag}')
+                from_tag = tag_names[idx + 1]
+            elif from_tag is not None and to_tag is None:
+                if from_tag not in tag_names:
+                    spinner.fail(f'Tag {from_tag} not found')
+                    raise ValueError(f'Tag {from_tag} not found')
+                idx = tag_names.index(from_tag)
+                if idx == 0:
+                    spinner.fail(f'No next tag found after {from_tag}')
+                    raise ValueError(f'No next tag found after {from_tag}')
+                to_tag = tag_names[idx - 1]
+            else:  # both specified
+                if from_tag not in tag_names or to_tag not in tag_names:
+                    missing = [t for t in [from_tag, to_tag] if t not in tag_names]
+                    spinner.fail(f'Tags not found: {", ".join(missing)}')
+                    raise ValueError(f'Tags not found: {", ".join(missing)}')
+                idx_from = tag_names.index(from_tag)
+                idx_to = tag_names.index(to_tag)
+                if idx_from <= idx_to:
+                    spinner.fail('from_tag must be older than to_tag in timeline')
+                    raise ValueError('from_tag must be older than to_tag in timeline')
             
-            latest_tag = tags[0].name
-            previous_tag = tags[1].name
-            latest_commit = tags[0].commit['id'][:8]
-            previous_commit = tags[1].commit['id'][:8]
+            # Get commits for display
+            from_commit = next(t.commit['id'][:8] for t in tags if t.name == from_tag)
+            to_commit = next(t.commit['id'][:8] for t in tags if t.name == to_tag)
             
-            spinner.succeed(f'Found tags: {latest_tag} (latest) and {previous_tag} (previous)')
-            print(f"   🏷️  {previous_tag} → commit {previous_commit}")
-            print(f"   🏷️  {latest_tag} → commit {latest_commit}")
-            print(f"   📊 Comparing: {previous_tag}..{latest_tag}\n")
+            spinner.succeed(f'Found tags: {to_tag} (to) and {from_tag} (from)')
+            print(f"   🏷️  {from_tag} → commit {from_commit}")
+            print(f"   🏷️  {to_tag} → commit {to_commit}")
+            print(f"   📊 Comparing: {from_tag}..{to_tag}\n")
             
-            return latest_tag, previous_tag
+            return from_tag, to_tag
         except Exception as e:
             spinner.fail(f'Failed to fetch tags: {str(e)}')
             raise
     
-    def get_commits_between_tags(self, tag1: str, tag2: str) -> List[Dict]:
-        """Get only the new commits introduced between two tags (tag2..tag1)"""
-        spinner = Halo(text=f'Fetching commits between {tag2} and {tag1}...', spinner='dots')
+    def get_commits_between_tags(self, from_tag: str, to_tag: str) -> List[Dict]:
+        """Get only the new commits introduced between two tags (from_tag..to_tag)"""
+        spinner = Halo(text=f'Fetching commits between {from_tag} and {to_tag}...', spinner='dots')
         spinner.start()
         
         try:
             # Use GitLab's compare API to get only commits between the two tags
-            # This returns commits that are in tag1 but not in tag2 (the new commits)
-            comparison = self.project.repository_compare(tag2, tag1)
+            # This returns commits that are in to_tag but not in from_tag (the new commits)
+            comparison = self.project.repository_compare(from_tag, to_tag)
             
             # Get the commit objects from the comparison
             commit_shas = [commit['id'] for commit in comparison['commits']]
@@ -112,7 +145,7 @@ class ChangelogGenerator:
                 commit = self.project.commits.get(sha)
                 commits.append(commit)
             
-            spinner.succeed(f'Found {len(commits)} new commits between {tag2} and {tag1}')
+            spinner.succeed(f'Found {len(commits)} new commits between {from_tag} and {to_tag}')
             
             # Display commit hashes for visual verification
             if commits:
@@ -398,7 +431,7 @@ Reglas:
             spinner.fail(f'Failed to save changelogs: {str(e)}')
             raise
     
-    def generate(self) -> Path:
+    def generate(self, from_tag: str = None, to_tag: str = None) -> Path:
         """Main method to generate changelogs"""
         print("\n" + "="*60)
         print("🚀 GitLab Changelog Generator with Gemini AI")
@@ -409,10 +442,10 @@ Reglas:
         self.connect_gemini()
         
         # Get tags
-        latest_tag, previous_tag = self.get_last_two_tags()
+        from_tag, to_tag = self.get_tags(from_tag, to_tag)
         
         # Get commits
-        commits = self.get_commits_between_tags(latest_tag, previous_tag)
+        commits = self.get_commits_between_tags(from_tag, to_tag)
         
         if not commits:
             print("\n⚠️  No commits found between tags")
@@ -424,23 +457,23 @@ Reglas:
         # Prepare context
         spinner = Halo(text='Preparing context for AI analysis...', spinner='dots')
         spinner.start()
-        context = self.prepare_context_for_gemini(commit_details, latest_tag)
+        context = self.prepare_context_for_gemini(commit_details, to_tag)
         spinner.succeed('Context prepared')
         
         # Generate changelogs
-        commercial_changelog = self.generate_commercial_changelog(context, latest_tag)
-        technical_changelog = self.generate_technical_changelog(context, latest_tag)
+        commercial_changelog = self.generate_commercial_changelog(context, to_tag)
+        technical_changelog = self.generate_technical_changelog(context, to_tag)
         
         # Save changelogs
-        output_dir = self.save_changelogs(commercial_changelog, technical_changelog, latest_tag)
+        output_dir = self.save_changelogs(commercial_changelog, technical_changelog, to_tag)
         
         print("\n" + "="*60)
         print("✅ Changelog generation completed successfully!")
         print("="*60)
         print(f"\n📁 Output directory: {output_dir.absolute()}")
         print(f"📄 Files generated:")
-        print(f"   - Changelog_comercial_{latest_tag}.md")
-        print(f"   - Changelog_tech_{latest_tag}.md")
+        print(f"   - Changelog_comercial_{to_tag}.md")
+        print(f"   - Changelog_tech_{to_tag}.md")
         print("\n💬 Files are formatted for WhatsApp/Telegram sharing\n")
         
         return output_dir
@@ -448,9 +481,14 @@ Reglas:
 
 def main():
     """Entry point for the script"""
+    parser = argparse.ArgumentParser(description='Generate changelogs from GitLab commits between tags')
+    parser.add_argument('--from-tag', help='Older tag to start from')
+    parser.add_argument('--to-tag', help='Newer tag to end at')
+    args = parser.parse_args()
+    
     try:
         generator = ChangelogGenerator()
-        generator.generate()
+        generator.generate(args.from_tag, args.to_tag)
     except KeyboardInterrupt:
         print("\n\n⚠️  Process interrupted by user")
         sys.exit(1)
