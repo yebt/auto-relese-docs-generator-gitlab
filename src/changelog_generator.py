@@ -203,8 +203,6 @@ Analiza los siguientes commits de un release de software y genera un changelog C
 
 {context}
 
-NOTA: Solo genera el llenado del documento, no respondas nada distinto ael contenido solicitado, no se requieren saludos, acerciones previas ni mejoras escritos previos
-
 IMPORTANTE: El formato debe ser compatible con WhatsApp/Telegram usando emojis y formato de texto enriquecido.
 
 Estructura requerida:
@@ -248,14 +246,27 @@ Reglas:
 - Sé conciso pero informativo
 """
         
+        # Configure structured output
+        config = types.GenerateContentConfig(
+            response_mime_type="application/json",
+            response_schema={
+                "type": "object",
+                "properties": {
+                    "content": {"type": "string"}
+                },
+                "required": ["content"]
+            }
+        )
+        
         try:
             response = self.gemini_client.models.generate_content(
                 model='gemini-2.0-flash-exp',
-                contents=prompt
+                contents=prompt,
+                config=config
             )
             
             spinner.succeed('Commercial changelog generated')
-            return response.text
+            return response.parsed['content']
         except Exception as e:
             spinner.fail(f'Failed to generate commercial changelog: {str(e)}')
             raise
@@ -333,14 +344,27 @@ Reglas:
 - Sé detallado y preciso
 """
         
+        # Configure structured output
+        config = types.GenerateContentConfig(
+            response_mime_type="application/json",
+            response_schema={
+                "type": "object",
+                "properties": {
+                    "content": {"type": "string"}
+                },
+                "required": ["content"]
+            }
+        )
+        
         try:
             response = self.gemini_client.models.generate_content(
                 model='gemini-2.0-flash-exp',
-                contents=prompt
+                contents=prompt,
+                config=config
             )
             
             spinner.succeed('Technical changelog generated')
-            return response.text
+            return response.parsed['content']
         except Exception as e:
             spinner.fail(f'Failed to generate technical changelog: {str(e)}')
             raise
