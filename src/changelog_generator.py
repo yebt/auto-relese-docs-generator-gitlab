@@ -11,7 +11,6 @@ from google import genai
 from google.genai import types
 from halo import Halo
 from dotenv import load_dotenv
-import argparse
 
 
 class ChangelogGenerator:
@@ -29,7 +28,7 @@ class ChangelogGenerator:
         self.gitlab_project_id = os.getenv('GITLAB_PROJECT_ID')
         self.gemini_token = os.getenv('GEMINI_TOKEN')
         
-        # Validate credentials
+        # Validate credentials1
         if not all([self.gitlab_token, self.gitlab_project_id, self.gemini_token]):
             raise ValueError(
                 "Missing required environment variables. Please check your .env file.\n"
@@ -477,25 +476,3 @@ Reglas:
         print("\n💬 Files are formatted for WhatsApp/Telegram sharing\n")
         
         return output_dir
-
-
-def main():
-    """Entry point for the script"""
-    parser = argparse.ArgumentParser(description='Generate changelogs from GitLab commits between tags')
-    parser.add_argument('--from-tag', help='Older tag to start from')
-    parser.add_argument('--to-tag', help='Newer tag to end at')
-    args = parser.parse_args()
-    
-    try:
-        generator = ChangelogGenerator()
-        generator.generate(args.from_tag, args.to_tag)
-    except KeyboardInterrupt:
-        print("\n\n⚠️  Process interrupted by user")
-        sys.exit(1)
-    except Exception as e:
-        print(f"\n\n❌ Error: {str(e)}")
-        sys.exit(1)
-
-
-if __name__ == '__main__':
-    main()
