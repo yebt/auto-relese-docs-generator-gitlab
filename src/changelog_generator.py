@@ -203,11 +203,13 @@ Analiza los siguientes commits de un release de software y genera un changelog C
 
 {context}
 
+NOTA: Solo genera el llenado del documento, no respondas nada distinto ael contenido solicitado, no se requieren saludos, acerciones previas ni mejoras escritos previos
+
 IMPORTANTE: El formato debe ser compatible con WhatsApp/Telegram usando emojis y formato de texto enriquecido.
 
 Estructura requerida:
 
-*📋 CHANGELOG COMERCIAL - Release {tag_name}*
+**📋 CHANGELOG COMERCIAL - Release {tag_name}**
 
 *🎯 RESUMEN EJECUTIVO*
 [Descripción breve y clara del release en 2-3 líneas]
