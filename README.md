@@ -4,6 +4,24 @@ Generador automático de changelogs para repositorios GitLab usando inteligencia
 
 > 📚 **[Ver Índice Completo de Documentación](INDEX.md)**
 
+## 🚀 Inicio Rápido
+
+```bash
+# 1. Instalar
+./setup.sh  # o setup.bat en Windows
+
+# 2. Configurar credenciales en .env
+nano .env
+
+# 3. Activar entorno virtual
+source .venv/bin/activate
+
+# 4. Ejecutar
+python main.py
+```
+
+> 💡 **Primera vez?** Lee la [Guía de Inicio](GETTING_STARTED.md) o el [Quickstart](QUICKSTART.md)
+
 ## 📋 Características
 
 - **Análisis automático** de commits entre los últimos dos tags del repositorio
@@ -46,29 +64,49 @@ Dentro encontrarás:
 
 ## 🛠️ Instalación
 
-### 1. Clonar el repositorio
+### Opción 1: Instalación Automática (Recomendada)
+
+Usa los scripts de instalación incluidos:
+
+```bash
+# En Linux/Mac
+./setup.sh
+
+# En Windows
+setup.bat
+```
+
+Estos scripts automáticamente:
+- Crean el entorno virtual
+- Instalan las dependencias
+- Copian el archivo `.env.example` a `.env`
+- Verifican la instalación
+
+### Opción 2: Instalación Manual
+
+#### 1. Clonar el repositorio
 
 ```bash
 git clone <repository-url>
 cd auto-relese-docs-generator-gitlab
 ```
 
-### 2. Crear entorno virtual
+#### 2. Crear entorno virtual
 
 ```bash
-python3 -m venv venv
-source venv/bin/activate  # En Linux/Mac
+python3 -m venv .venv
+source .venv/bin/activate  # En Linux/Mac
 # o
-venv\Scripts\activate  # En Windows
+.venv\Scripts\activate  # En Windows
 ```
 
-### 3. Instalar dependencias
+#### 3. Instalar dependencias
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 4. Configurar variables de entorno
+#### 4. Configurar variables de entorno
 
 Copia el archivo de ejemplo y completa tus credenciales:
 
@@ -111,14 +149,59 @@ GEMINI_TOKEN=tu_api_key_de_gemini
 
 ### Ejecución básica
 
+Genera changelogs entre los últimos dos tags del repositorio:
+
 ```bash
 python main.py
 ```
 
-### Ejecución del módulo directamente
+### Especificar tags personalizados
+
+Puedes especificar los tags entre los cuales generar el changelog:
 
 ```bash
-python -m src.changelog_generator
+# Especificar ambos tags (desde el más antiguo al más reciente)
+python main.py --from-tag v1.0.0 --to-tag v1.2.0
+
+# Especificar solo el tag final (usará el tag anterior automáticamente)
+python main.py --to-tag v1.2.0
+
+# Especificar solo el tag inicial (usará el siguiente tag automáticamente)
+python main.py --from-tag v1.0.0
+```
+
+### Activar entorno virtual
+
+Recuerda activar el entorno virtual antes de ejecutar:
+
+```bash
+# En Linux/Mac
+source .venv/bin/activate
+
+# En Windows
+.venv\Scripts\activate
+```
+
+### Ejemplos de uso
+
+```bash
+# Caso 1: Changelog del último release
+python main.py
+
+# Caso 2: Changelog entre dos versiones específicas
+python main.py --from-tag v2.0.0 --to-tag v2.5.0
+
+# Caso 3: Changelog desde una versión hasta la más reciente
+python main.py --from-tag v2.0.0
+
+# Caso 4: Changelog de la versión específica
+python main.py --to-tag v2.5.0
+```
+
+### Ver ayuda
+
+```bash
+python main.py --help
 ```
 
 ## 📁 Estructura del Proyecto
@@ -126,6 +209,7 @@ python -m src.changelog_generator
 ```
 auto-relese-docs-generator-gitlab/
 ├── src/
+│   ├── __init__.py              # Inicialización del paquete
 │   ├── alert.py                 # Utilidades de alertas
 │   └── changelog_generator.py   # Generador principal
 ├── results/                     # Changelogs generados (auto-creado)
@@ -134,10 +218,20 @@ auto-relese-docs-generator-gitlab/
 │       └── Changelog_tech_{release}.md
 ├── .env                         # Credenciales (no versionado)
 ├── .env.example                 # Plantilla de credenciales
-├── .gitignore
-├── main.py                      # Punto de entrada
-├── requirements.txt             # Dependencias
-└── README.md                    # Este archivo
+├── .gitignore                   # Archivos ignorados por Git
+├── main.py                      # Punto de entrada principal
+├── requirements.txt             # Dependencias Python
+├── setup.sh                     # Script de instalación (Linux/Mac)
+├── setup.bat                    # Script de instalación (Windows)
+├── README.md                    # Este archivo
+├── INDEX.md                     # Índice de documentación
+├── GETTING_STARTED.md           # Guía de inicio rápido
+├── QUICKSTART.md                # Inicio rápido
+├── USAGE_GUIDE.md               # Guía detallada de uso
+├── INSTALLATION_TEST.md         # Pruebas de instalación
+├── PROJECT_OVERVIEW.md          # Visión general del proyecto
+├── SAMPLE_OUTPUT.md             # Ejemplos de salida
+└── TROUBLESHOOTING.md           # Solución de problemas
 ```
 
 ## 📦 Dependencias Principales
@@ -195,12 +289,56 @@ Los changelogs están optimizados para compartir en mensajería:
 - Confirma que tienes cuota disponible en tu cuenta de Google AI
 - Revisa la conectividad a internet
 
-## 📝 Notas
+## 📤 Salida del Programa
 
-- Los archivos `.env` están en `.gitignore` por seguridad
-- La carpeta `results/` se crea automáticamente si no existe
-- Cada ejecución crea una nueva carpeta con timestamp
-- Los diffs muy largos se truncan para evitar límites de tokens
+Después de ejecutar, encontrarás los changelogs en:
+
+```
+results/{release}_{timestamp}/
+├── Changelog_comercial_{release}.md
+└── Changelog_tech_{release}.md
+```
+
+**Ejemplo de salida en consola:**
+
+```
+============================================================
+🚀 GitLab Changelog Generator with Gemini AI
+============================================================
+
+✔ Connected to GitLab project: my-project
+✔ Connected to Gemini AI
+✔ Found tags: v1.2.0 (latest) and v1.1.0 (previous)
+✔ Found 15 commits between tags
+✔ Fetched details for 15 commits
+✔ Context prepared
+✔ Commercial changelog generated
+✔ Technical changelog generated
+✔ Changelogs saved to: results/v1.2.0_20251106_163530
+
+============================================================
+✅ Changelog generation completed successfully!
+============================================================
+
+📁 Output directory: /path/to/results/v1.2.0_20251106_163530
+📄 Files generated:
+   - Changelog_comercial_v1.2.0.md
+   - Changelog_tech_v1.2.0.md
+
+💬 Files are formatted for WhatsApp/Telegram sharing
+```
+
+> 📖 **Ver ejemplos completos**: [SAMPLE_OUTPUT.md](SAMPLE_OUTPUT.md)
+
+## 📝 Notas Importantes
+
+- ✅ Los archivos `.env` están en `.gitignore` por seguridad
+- ✅ La carpeta `results/` se crea automáticamente si no existe
+- ✅ Cada ejecución crea una nueva carpeta con timestamp único
+- ✅ Los diffs muy largos se truncan para evitar límites de tokens de la IA
+- ✅ Los changelogs están optimizados para compartir en WhatsApp/Telegram
+- ✅ Se requiere al menos 2 tags en el repositorio para funcionar
+- ⚠️ Revisa y edita los changelogs antes de compartir con clientes
 
 ## 🤝 Contribuciones
 
@@ -216,10 +354,26 @@ Las contribuciones son bienvenidas. Por favor:
 
 Este proyecto está bajo la licencia MIT.
 
+## 📚 Documentación Adicional
+
+Este proyecto incluye documentación completa:
+
+- **[INDEX.md](INDEX.md)** - Índice completo de toda la documentación
+- **[GETTING_STARTED.md](GETTING_STARTED.md)** - Guía paso a paso para comenzar
+- **[QUICKSTART.md](QUICKSTART.md)** - Inicio rápido de 5 minutos
+- **[USAGE_GUIDE.md](USAGE_GUIDE.md)** - Guía detallada de uso y casos prácticos
+- **[INSTALLATION_TEST.md](INSTALLATION_TEST.md)** - Cómo verificar tu instalación
+- **[PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md)** - Visión general técnica del proyecto
+- **[SAMPLE_OUTPUT.md](SAMPLE_OUTPUT.md)** - Ejemplos reales de changelogs generados
+- **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** - Solución de problemas comunes
+
 ## 👥 Autor
 
 Desarrollado para automatizar la generación de changelogs y mejorar la comunicación entre equipos técnicos y comerciales.
 
 ---
 
-**¿Preguntas o problemas?** Abre un issue en el repositorio.
+**¿Preguntas o problemas?** 
+- Consulta la [documentación completa](INDEX.md)
+- Revisa [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
+- Abre un issue en el repositorio
