@@ -28,6 +28,7 @@ python main.py
 - **Dos tipos de changelog**:
   - 📊 **Comercial**: Para equipos de ventas y clientes (sin jerga técnica)
   - 🔧 **Técnico**: Para equipos de desarrollo (con detalles de implementación)
+- **Sistema de caché** 💾: Guarda progreso y permite recuperación ante interrupciones
 - **Formato compatible** con WhatsApp y Telegram
 - **Emojis visuales** para identificar rápidamente el tipo de cambio
 - **Análisis con IA** usando Gemini para comprender el contexto de los cambios
@@ -196,7 +197,32 @@ python main.py --from-tag v2.0.0
 
 # Caso 4: Changelog de la versión específica
 python main.py --to-tag v2.5.0
+
+# Caso 5: Con caché para recuperación ante interrupciones
+python main.py --cache
+
+# Caso 6: Con caché y tags específicos
+python main.py --from-tag v2.0.0 --to-tag v2.5.0 --cache
 ```
+
+### Uso del Sistema de Caché
+
+El flag `--cache` habilita el sistema de caché que:
+- Guarda los commits obtenidos entre tags
+- Guarda incrementalmente cada detalle de commit
+- Permite recuperar el trabajo si hay interrupciones (Ctrl+C, errores de API, etc.)
+
+```bash
+# Primera ejecución (interrumpida en commit 100/254)
+python main.py --cache --from-tag v3.92.4 --to-tag v3.94.15
+# Ctrl+C para interrumpir
+
+# Segunda ejecución (continúa desde commit 101)
+python main.py --cache --from-tag v3.92.4 --to-tag v3.94.15
+# Carga 100 commits desde caché, continúa con los restantes
+```
+
+> 📖 **Documentación completa del caché**: [CACHE_USAGE.md](CACHE_USAGE.md)
 
 ### Ver ayuda
 
@@ -211,7 +237,9 @@ auto-relese-docs-generator-gitlab/
 ├── src/
 │   ├── __init__.py              # Inicialización del paquete
 │   ├── alert.py                 # Utilidades de alertas
+│   ├── cache_manager.py         # Gestor de caché
 │   └── changelog_generator.py   # Generador principal
+├── .cache/                      # Caché de commits (auto-creado)
 ├── results/                     # Changelogs generados (auto-creado)
 │   └── {release}_{timestamp}/
 │       ├── Changelog_comercial_{release}.md
@@ -228,6 +256,7 @@ auto-relese-docs-generator-gitlab/
 ├── GETTING_STARTED.md           # Guía de inicio rápido
 ├── QUICKSTART.md                # Inicio rápido
 ├── USAGE_GUIDE.md               # Guía detallada de uso
+├── CACHE_USAGE.md               # Documentación del sistema de caché
 ├── INSTALLATION_TEST.md         # Pruebas de instalación
 ├── PROJECT_OVERVIEW.md          # Visión general del proyecto
 ├── SAMPLE_OUTPUT.md             # Ejemplos de salida
@@ -362,6 +391,7 @@ Este proyecto incluye documentación completa:
 - **[GETTING_STARTED.md](GETTING_STARTED.md)** - Guía paso a paso para comenzar
 - **[QUICKSTART.md](QUICKSTART.md)** - Inicio rápido de 5 minutos
 - **[USAGE_GUIDE.md](USAGE_GUIDE.md)** - Guía detallada de uso y casos prácticos
+- **[CACHE_USAGE.md](CACHE_USAGE.md)** - Documentación completa del sistema de caché
 - **[INSTALLATION_TEST.md](INSTALLATION_TEST.md)** - Cómo verificar tu instalación
 - **[PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md)** - Visión general técnica del proyecto
 - **[SAMPLE_OUTPUT.md](SAMPLE_OUTPUT.md)** - Ejemplos reales de changelogs generados
