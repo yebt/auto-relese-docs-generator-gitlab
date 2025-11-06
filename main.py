@@ -19,10 +19,11 @@ def main():
     parser = argparse.ArgumentParser(description='Generate changelogs from GitLab commits between tags')
     parser.add_argument('--from-tag', help='Older tag to start from')
     parser.add_argument('--to-tag', help='Newer tag to end at')
+    parser.add_argument('--cache', action='store_true', help='Enable caching for commits and commit details to allow recovery from interruptions')
     args = parser.parse_args()
     
     try:
-        generator = ChangelogGenerator()
+        generator = ChangelogGenerator(use_cache=args.cache)
         generator.generate(args.from_tag, args.to_tag)
     except KeyboardInterrupt:
         print("\n\n⚠️  Process interrupted by user")

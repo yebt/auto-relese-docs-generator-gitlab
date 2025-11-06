@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 import os
-import sys
 from datetime import datetime
 from pathlib import Path
 from typing import List, Dict, Tuple
@@ -11,6 +10,7 @@ from google import genai
 from google.genai import types
 from halo import Halo
 from dotenv import load_dotenv
+from .cache_manager import CacheManager
 
 
 class ChangelogGenerator:
@@ -19,7 +19,7 @@ class ChangelogGenerator:
     using Gemini AI to analyze commits between specified tags or last two tags.
     """
     
-    def __init__(self):
+    def __init__(self, use_cache: bool = False):
         """Initialize the changelog generator with credentials from .env"""
         load_dotenv()
         
@@ -39,6 +39,10 @@ class ChangelogGenerator:
         self.gl = None
         self.project = None
         self.gemini_client = None
+        
+        # Initialize cache manager
+        self.use_cache = use_cache
+        self.cache_manager = CacheManager() if use_cache else None
         
     def connect_gitlab(self) -> None:
         """Connect to GitLab API"""
@@ -127,6 +131,19 @@ class ChangelogGenerator:
     
     def get_commits_between_tags(self, from_tag: str, to_tag: str) -> List[Dict]:
         """Get only the new commits introduced between two tags (from_tag..to_tag)"""
+        # Check cache first if enabled
+        if self.use_cache:
+            cached_commits = self.cache_manager.load_commits_cache(from_tag, to_tag)
+            if cached_commits:
+                print(f'\n💾 Loaded {len(cached_commits)} commits from cache')
+                print(f"\n📋 Commits to be analyzed ({len(cached_commits)}):")
+                for i, commit in enumerate(cached_commits, 1):
+                    short_hash = commit['id'][:8]
+                    title = commit['title'][:60] + '...' if len(commit['title']) > 60 else commit['title']
+                    print(f"   {i}. {short_hash} - {title}")
+                print()
+                return cached_commits
+        
         spinner = Halo(text=f'Fetching commits between {from_tag} and {to_tag}...', spinner='dots')
         spinner.start()
         
@@ -146,6 +163,11 @@ class ChangelogGenerator:
             
             spinner.succeed(f'Found {len(commits)} new commits between {from_tag} and {to_tag}')
             
+            # Save to cache if enabled
+            if self.use_cache:
+                self.cache_manager.save_commits_cache(from_tag, to_tag, commits)
+                print('💾 Commits saved to cache')
+            
             # Display commit hashes for visual verification
             if commits:
                 print(f"\n📋 Commits to be analyzed ({len(commits)}):")
@@ -160,22 +182,40 @@ class ChangelogGenerator:
             spinner.fail(f'Failed to fetch commits: {str(e)}')
             raise
     
-    def get_commit_details(self, commits: List) -> List[Dict]:
-        """Get detailed information for each commit including diffs"""
+    def get_commit_details(self, commits: List, from_tag: str, to_tag: str) -> List[Dict]:
+        """Get detailed information for each commit including diffs with incremental caching"""
+        # Load cached details if cache is enabled
+        cached_details = {}
+        if self.use_cache:
+            cached_details = self.cache_manager.load_commit_details(from_tag, to_tag)
+            if cached_details:
+                print(f'\n💾 Loaded {len(cached_details)} commit details from cache')
+        
         spinner = Halo(text='Fetching commit details and diffs...', spinner='dots')
         spinner.start()
         
         commit_details = []
+        fetched_count = 0
         
         try:
             for i, commit in enumerate(commits):
+                # Handle both dict (from cache) and object (from GitLab) formats
+                full_commit_id = commit.get('id') if isinstance(commit, dict) else commit.id
+                
+                # Check if this commit is already cached
+                if self.use_cache and full_commit_id in cached_details:
+                    commit_details.append(cached_details[full_commit_id])
+                    spinner.text = f'Loading commit details {i+1}/{len(commits)} (from cache)...'
+                    continue
+                
+                # Fetch from GitLab
                 spinner.text = f'Fetching commit details {i+1}/{len(commits)}...'
                 
                 # Get full commit details
-                full_commit = self.project.commits.get(commit.id)
+                full_commit = self.project.commits.get(full_commit_id)
                 
                 # Get diff
-                diff = full_commit.diff()
+                diff = full_commit.diff(get_all=True)
                 
                 commit_info = {
                     'id': full_commit.id[:8],
@@ -189,11 +229,24 @@ class ChangelogGenerator:
                 }
                 
                 commit_details.append(commit_info)
+                fetched_count += 1
+                
+                # Save to cache incrementally if enabled
+                if self.use_cache:
+                    self.cache_manager.save_commit_detail(from_tag, to_tag, full_commit.id, commit_info)
             
-            spinner.succeed(f'Fetched details for {len(commit_details)} commits')
+            cached_msg = f' ({len(commit_details) - fetched_count} from cache)' if self.use_cache and len(cached_details) > 0 else ''
+            spinner.succeed(f'Fetched details for {len(commit_details)} commits{cached_msg}')
             return commit_details
+        except KeyboardInterrupt:
+            spinner.warn(f'Interrupted! Fetched {fetched_count} new details, {len(commit_details)} total')
+            if self.use_cache:
+                print('💾 Progress saved to cache. Run again with --cache to resume.')
+            raise
         except Exception as e:
             spinner.fail(f'Failed to fetch commit details: {str(e)}')
+            if self.use_cache and len(commit_details) > 0:
+                print(f'💾 Partial progress saved to cache ({len(commit_details)} commits)')
             raise
     
     def prepare_context_for_gemini(self, commits: List[Dict], tag_name: str) -> str:
@@ -451,7 +504,7 @@ Reglas:
             return None
         
         # Get commit details
-        commit_details = self.get_commit_details(commits)
+        commit_details = self.get_commit_details(commits, from_tag, to_tag)
         
         # Prepare context
         spinner = Halo(text='Preparing context for AI analysis...', spinner='dots')
@@ -470,7 +523,7 @@ Reglas:
         print("✅ Changelog generation completed successfully!")
         print("="*60)
         print(f"\n📁 Output directory: {output_dir.absolute()}")
-        print(f"📄 Files generated:")
+        print("📄 Files generated:")
         print(f"   - Changelog_comercial_{to_tag}.md")
         print(f"   - Changelog_tech_{to_tag}.md")
         print("\n💬 Files are formatted for WhatsApp/Telegram sharing\n")
