@@ -11,6 +11,7 @@ from google.genai import types
 from halo import Halo
 from dotenv import load_dotenv
 from .cache_manager import CacheManager
+from .gemini_cli_analyzer import GeminiCLIAnalyzer
 
 
 class ChangelogGenerator:
@@ -19,7 +20,7 @@ class ChangelogGenerator:
     using Gemini AI to analyze commits between specified tags or last two tags.
     """
     
-    def __init__(self, use_cache: bool = False):
+    def __init__(self, use_cache: bool = False, use_cli: bool = True):
         """Initialize the changelog generator with credentials from .env"""
         load_dotenv()
         
@@ -28,17 +29,19 @@ class ChangelogGenerator:
         self.gitlab_project_id = os.getenv('GITLAB_PROJECT_ID')
         self.gemini_token = os.getenv('GEMINI_TOKEN')
         
-        # Validate credentials1
-        if not all([self.gitlab_token, self.gitlab_project_id, self.gemini_token]):
+        # Validate credentials
+        if not all([self.gitlab_token, self.gitlab_project_id]):
             raise ValueError(
                 "Missing required environment variables. Please check your .env file.\n"
-                "Required: GITLAB_ACCESS_TOKEN, GITLAB_PROJECT_ID, GEMINI_TOKEN"
+                "Required: GITLAB_ACCESS_TOKEN, GITLAB_PROJECT_ID"
             )
         
         # Initialize clients
         self.gl = None
         self.project = None
         self.gemini_client = None
+        self.use_cli = use_cli
+        self.gemini_cli_analyzer = None
         
         # Initialize cache manager
         self.use_cache = use_cache
@@ -59,16 +62,29 @@ class ChangelogGenerator:
             raise
     
     def connect_gemini(self) -> None:
-        """Connect to Gemini AI"""
-        spinner = Halo(text='Connecting to Gemini AI...', spinner='dots')
-        spinner.start()
-        
-        try:
-            self.gemini_client = genai.Client(api_key=self.gemini_token)
-            spinner.succeed('Connected to Gemini AI')
-        except Exception as e:
-            spinner.fail(f'Failed to connect to Gemini AI: {str(e)}')
-            raise
+        """Connect to Gemini AI (CLI or API)"""
+        if self.use_cli:
+            spinner = Halo(text='Initializing Gemini CLI...', spinner='dots')
+            spinner.start()
+            
+            try:
+                self.gemini_cli_analyzer = GeminiCLIAnalyzer()
+                spinner.succeed('Gemini CLI initialized')
+            except Exception as e:
+                spinner.fail(f'Failed to initialize Gemini CLI: {str(e)}')
+                raise
+        else:
+            spinner = Halo(text='Connecting to Gemini AI API...', spinner='dots')
+            spinner.start()
+            
+            try:
+                if not self.gemini_token:
+                    raise ValueError("GEMINI_TOKEN required for API mode")
+                self.gemini_client = genai.Client(api_key=self.gemini_token)
+                spinner.succeed('Connected to Gemini AI API')
+            except Exception as e:
+                spinner.fail(f'Failed to connect to Gemini AI API: {str(e)}')
+                raise
     
     def get_tags(self, from_tag: str = None, to_tag: str = None) -> Tuple[str, str]:
         """Get the tags for changelog generation based on input parameters"""
@@ -249,8 +265,39 @@ class ChangelogGenerator:
                 print(f'💾 Partial progress saved to cache ({len(commit_details)} commits)')
             raise
     
+    def split_commits_into_batches(self, commits: List[Dict], batch_size: int = 5) -> List[List[Dict]]:
+        """Split commits into manageable batches for analysis"""
+        batches = []
+        for i in range(0, len(commits), batch_size):
+            batches.append(commits[i:i + batch_size])
+        return batches
+    
+    def analyze_commits_with_cli(self, commits: List[Dict]) -> List[Dict]:
+        """Analyze commits in batches using Gemini CLI"""
+        spinner = Halo(text='Preparing commits for analysis...', spinner='dots')
+        spinner.start()
+        
+        # Split commits into batches to avoid overwhelming Gemini
+        batches = self.split_commits_into_batches(commits, batch_size=5)
+        spinner.succeed(f'Split {len(commits)} commits into {len(batches)} batches')
+        
+        analyzed_results = []
+        
+        for i, batch in enumerate(batches, 1):
+            try:
+                result = self.gemini_cli_analyzer.analyze_commits_batch(
+                    batch, i, len(batches)
+                )
+                analyzed_results.append(result)
+            except Exception as e:
+                print(f"\n⚠️  Warning: Failed to analyze batch {i}: {str(e)}")
+                print("Continuing with remaining batches...\n")
+                continue
+        
+        return analyzed_results
+    
     def prepare_context_for_gemini(self, commits: List[Dict], tag_name: str) -> str:
-        """Prepare commit data as context for Gemini AI"""
+        """Prepare commit data as context for Gemini AI (legacy API mode)"""
         context = f"# Release: {tag_name}\n\n"
         context += f"Total commits: {len(commits)}\n\n"
         context += "## Commits:\n\n"
@@ -277,10 +324,18 @@ class ChangelogGenerator:
         
         return context
     
-    def generate_commercial_changelog(self, context: str, tag_name: str) -> str:
-        """Generate commercial changelog using Gemini AI"""
-        spinner = Halo(text='Generating commercial changelog with Gemini AI...', spinner='dots')
+    def generate_commercial_changelog(self, context_or_analyzed: any, tag_name: str) -> str:
+        """Generate commercial changelog using Gemini AI (CLI or API)"""
+        if self.use_cli:
+            # context_or_analyzed is the analyzed commits from CLI
+            return self.gemini_cli_analyzer.generate_commercial_changelog(
+                context_or_analyzed, tag_name
+            )
+        
+        # Legacy API mode
+        spinner = Halo(text='Generating commercial changelog with Gemini AI API...', spinner='dots')
         spinner.start()
+        context = context_or_analyzed
         
         prompt = f"""Eres un experto en comunicación comercial y product management. 
 
@@ -356,10 +411,18 @@ Reglas:
             spinner.fail(f'Failed to generate commercial changelog: {str(e)}')
             raise
     
-    def generate_technical_changelog(self, context: str, tag_name: str) -> str:
-        """Generate technical changelog using Gemini AI"""
-        spinner = Halo(text='Generating technical changelog with Gemini AI...', spinner='dots')
+    def generate_technical_changelog(self, context_or_analyzed: any, tag_name: str) -> str:
+        """Generate technical changelog using Gemini AI (CLI or API)"""
+        if self.use_cli:
+            # context_or_analyzed is the analyzed commits from CLI
+            return self.gemini_cli_analyzer.generate_technical_changelog(
+                context_or_analyzed, tag_name
+            )
+        
+        # Legacy API mode
+        spinner = Halo(text='Generating technical changelog with Gemini AI API...', spinner='dots')
         spinner.start()
+        context = context_or_analyzed
         
         prompt = f"""Eres un experto en desarrollo de software y documentación técnica.
 
@@ -506,15 +569,24 @@ Reglas:
         # Get commit details
         commit_details = self.get_commit_details(commits, from_tag, to_tag)
         
-        # Prepare context
-        spinner = Halo(text='Preparing context for AI analysis...', spinner='dots')
-        spinner.start()
-        context = self.prepare_context_for_gemini(commit_details, to_tag)
-        spinner.succeed('Context prepared')
-        
-        # Generate changelogs
-        commercial_changelog = self.generate_commercial_changelog(context, to_tag)
-        technical_changelog = self.generate_technical_changelog(context, to_tag)
+        # Prepare context or analyze commits based on mode
+        if self.use_cli:
+            # Use Gemini CLI for analysis
+            analyzed_commits = self.analyze_commits_with_cli(commit_details)
+            
+            # Generate changelogs using analyzed data
+            commercial_changelog = self.generate_commercial_changelog(analyzed_commits, to_tag)
+            technical_changelog = self.generate_technical_changelog(analyzed_commits, to_tag)
+        else:
+            # Legacy API mode
+            spinner = Halo(text='Preparing context for AI analysis...', spinner='dots')
+            spinner.start()
+            context = self.prepare_context_for_gemini(commit_details, to_tag)
+            spinner.succeed('Context prepared')
+            
+            # Generate changelogs
+            commercial_changelog = self.generate_commercial_changelog(context, to_tag)
+            technical_changelog = self.generate_technical_changelog(context, to_tag)
         
         # Save changelogs
         output_dir = self.save_changelogs(commercial_changelog, technical_changelog, to_tag)

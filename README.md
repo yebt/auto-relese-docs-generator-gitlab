@@ -31,7 +31,8 @@ python main.py
 - **Sistema de caché** 💾: Guarda progreso y permite recuperación ante interrupciones
 - **Formato compatible** con WhatsApp y Telegram
 - **Emojis visuales** para identificar rápidamente el tipo de cambio
-- **Análisis con IA** usando Gemini para comprender el contexto de los cambios
+- **Análisis con IA** usando Gemini CLI (local) o Gemini API
+- **Procesamiento por lotes** para manejar grandes volúmenes de commits
 - **Spinners de progreso** con Halo para mejor UX
 
 ## 🎯 ¿Qué genera?
@@ -120,7 +121,7 @@ Edita `.env` con tus credenciales:
 ```env
 GITLAB_ACCESS_TOKEN=tu_token_de_gitlab
 GITLAB_PROJECT_ID=tu_project_id
-GEMINI_TOKEN=tu_api_key_de_gemini
+GEMINI_TOKEN=tu_api_key_de_gemini  # Solo necesario si usas --api
 ```
 
 ## 🔑 Obtener Credenciales
@@ -140,21 +141,45 @@ GEMINI_TOKEN=tu_api_key_de_gemini
 2. Settings > General
 3. El Project ID aparece en la parte superior
 
-### Gemini API Key
+### Gemini CLI (Recomendado)
+
+**Por defecto, el generador usa Gemini CLI** que se ejecuta localmente y evita problemas con peticiones grandes.
+
+1. Instala Gemini CLI siguiendo las instrucciones oficiales:
+   - Visita: https://ai.google.dev/gemini-api/docs/cli
+2. Verifica la instalación:
+   ```bash
+   gemini --version
+   ```
+
+### Gemini API Key (Opcional)
+
+Solo necesario si prefieres usar `--api` en lugar de Gemini CLI:
 
 1. Ve a Google AI Studio: https://aistudio.google.com/app/apikey
 2. Crea una nueva API key
 3. Copia la clave generada
+4. Agrégala a tu archivo `.env`
 
 ## 🚀 Uso
 
 ### Ejecución básica
 
-Genera changelogs entre los últimos dos tags del repositorio:
+Genera changelogs entre los últimos dos tags del repositorio usando Gemini CLI (por defecto):
 
 ```bash
 python main.py
 ```
+
+### Usar Gemini API en lugar de CLI
+
+Si prefieres usar la API de Gemini (requiere GEMINI_TOKEN en .env):
+
+```bash
+python main.py --api
+```
+
+> ⚠️ **Nota**: La API puede rechazar peticiones con muchos commits. Se recomienda usar Gemini CLI (modo por defecto).
 
 ### Especificar tags personalizados
 
@@ -203,6 +228,12 @@ python main.py --cache
 
 # Caso 6: Con caché y tags específicos
 python main.py --from-tag v2.0.0 --to-tag v2.5.0 --cache
+
+# Caso 7: Usar Gemini API en lugar de CLI
+python main.py --api
+
+# Caso 8: Combinar API con caché
+python main.py --api --cache --from-tag v2.0.0 --to-tag v2.5.0
 ```
 
 ### Uso del Sistema de Caché
@@ -238,6 +269,7 @@ auto-relese-docs-generator-gitlab/
 │   ├── __init__.py              # Inicialización del paquete
 │   ├── alert.py                 # Utilidades de alertas
 │   ├── cache_manager.py         # Gestor de caché
+│   ├── gemini_cli_analyzer.py   # Analizador con Gemini CLI
 │   └── changelog_generator.py   # Generador principal
 ├── .cache/                      # Caché de commits (auto-creado)
 ├── results/                     # Changelogs generados (auto-creado)
@@ -266,19 +298,34 @@ auto-relese-docs-generator-gitlab/
 ## 📦 Dependencias Principales
 
 - **python-gitlab**: Cliente para la API de GitLab
-- **google-genai**: Cliente para Gemini AI
+- **google-genai**: Cliente para Gemini AI (solo para modo --api)
 - **halo**: Spinners de progreso
 - **python-dotenv**: Manejo de variables de entorno
+- **Gemini CLI**: Herramienta de línea de comandos de Google (modo por defecto)
 
 ## 🔄 Flujo de Trabajo
 
-1. **Conexión**: Se conecta a GitLab y Gemini AI
+### Modo CLI (Por defecto)
+
+1. **Conexión**: Se conecta a GitLab y verifica Gemini CLI
 2. **Tags**: Obtiene los últimos dos tags del repositorio
 3. **Commits**: Extrae todos los commits entre esos tags
 4. **Detalles**: Obtiene información detallada de cada commit (mensaje, diffs, stats)
-5. **Análisis**: Envía el contexto a Gemini AI para análisis
-6. **Generación**: Crea dos changelogs con diferentes enfoques
-7. **Guardado**: Almacena los archivos en `results/`
+5. **Análisis por lotes**: Divide commits en lotes y los analiza con Gemini CLI
+6. **Categorización**: Gemini CLI categoriza cada commit (features, fixes, improvements, etc.)
+7. **Generación**: Crea dos changelogs usando los commits categorizados
+8. **Guardado**: Almacena los archivos en `results/`
+
+### Modo API (Con --api)
+
+1. **Conexión**: Se conecta a GitLab y Gemini API
+2. **Tags**: Obtiene los últimos dos tags del repositorio
+3. **Commits**: Extrae todos los commits entre esos tags
+4. **Detalles**: Obtiene información detallada de cada commit
+5. **Contexto**: Prepara todo el contexto en un solo documento
+6. **Análisis**: Envía el contexto completo a Gemini API
+7. **Generación**: Crea dos changelogs
+8. **Guardado**: Almacena los archivos en `results/`
 
 ## 🎨 Formato de Salida
 
@@ -295,7 +342,7 @@ Los changelogs están optimizados para compartir en mensajería:
 - Python 3.8 o superior
 - Acceso a un repositorio GitLab con al menos 2 tags
 - Token de acceso de GitLab con permisos adecuados
-- API Key de Gemini AI
+- **Gemini CLI** instalado (modo por defecto) O **API Key de Gemini AI** (modo --api)
 - Conexión a internet
 
 ## 🐛 Troubleshooting
@@ -313,10 +360,16 @@ Los changelogs están optimizados para compartir en mensajería:
 - Confirma que el Project ID es correcto
 - Revisa que el token no ha expirado
 
-### Error de Gemini AI
-- Verifica que la API key es válida
+### Error de Gemini CLI
+- Verifica que Gemini CLI está instalado: `gemini --version`
+- Instala Gemini CLI desde: https://ai.google.dev/gemini-api/docs/cli
+- Verifica que tienes permisos de ejecución
+
+### Error de Gemini API (modo --api)
+- Verifica que la API key es válida en tu archivo `.env`
 - Confirma que tienes cuota disponible en tu cuenta de Google AI
 - Revisa la conectividad a internet
+- Si tienes muchos commits, considera usar el modo CLI (sin --api)
 
 ## 📤 Salida del Programa
 
