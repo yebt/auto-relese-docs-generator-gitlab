@@ -45,24 +45,28 @@ Dentro encontrarás:
 
 ### Estructura del Changelog Comercial
 
-- ✨ Nuevas características (🟢)
-- 🔧 Mejoras (🔵)
-- 🐛 Correcciones (🟡)
-- ⚠️ Cambios importantes (🔴)
-- 💡 Valor aportado
-- 🎯 Objetivos alcanzados
+- Nuevas características (ítems marcados con 🟢)
+- Mejoras (ítems marcados con 🔵)
+- Correcciones (ítems marcados con 🟡)
+- Cambios importantes (ítems marcados con 🔴)
+- Valor aportado
+- Objetivos alcanzados
+
+> Las secciones sin ítems reales no se incluyen en el changelog generado.
 
 ### Estructura del Changelog Técnico
 
-- ✨ Nuevas funcionalidades (🟢)
-- 🔧 Mejoras técnicas (🔵)
-- 🐛 Bugs corregidos (🟡)
-- ⚠️ Breaking changes (🔴)
-- 🏗️ Cambios de arquitectura (🟣)
-- 📦 Dependencias
-- ⚡ Performance
-- 🔒 Seguridad
-- 🧪 Testing
+- Nuevas funcionalidades (ítems marcados con 🟢)
+- Mejoras técnicas (ítems marcados con 🔵)
+- Bugs corregidos (ítems marcados con 🟡)
+- Breaking changes (ítems marcados con 🔴)
+- Cambios de arquitectura (ítems marcados con 🟣)
+- Dependencias
+- Performance
+- Seguridad
+- Testing
+
+> Al igual que en el changelog comercial, las secciones sin contenido no se generan.
 
 ## 🛠️ Instalación
 
@@ -332,10 +336,11 @@ auto-relese-docs-generator-gitlab/
 Los changelogs están optimizados para compartir en mensajería:
 
 - **Formato Markdown** compatible con WhatsApp/Telegram
-- **Emojis** para identificación visual rápida
+- **Emojis de colores solo en los ítems**, no en los títulos de sección
 - **Negrita** para títulos y secciones importantes
 - **Listas** organizadas por tipo de cambio
 - **Colores** mediante emojis (🟢 verde, 🔵 azul, 🟡 amarillo, 🔴 rojo, 🟣 morado)
+- **Secciones vacías omitidas** para mantener el texto conciso y legible
 
 ## ⚠️ Requisitos
 
