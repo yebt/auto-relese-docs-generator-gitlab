@@ -63,4 +63,3 @@ class Alert:
         ]
         print("\n\t\033[38;5;166m".join(header))
         print("\033[0m")
-
