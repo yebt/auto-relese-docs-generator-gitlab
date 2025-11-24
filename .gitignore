@@ -189,5 +189,7 @@ pip-selfcheck.json
 
 # Project specific
 results/
+.cache/
 .env
 .env.local
+*.bak
