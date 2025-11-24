@@ -182,47 +182,41 @@ Responde SOLO con un JSON válido con esta estructura:
         
         prompt = f"""Basándote en el análisis de commits proporcionado, genera un CHANGELOG COMERCIAL para el release {tag_name}.
 
-IMPORTANTE: El formato debe ser compatible con WhatsApp/Telegram usando emojis y formato de texto enriquecido.
+IMPORTANTE: El formato debe ser compatible con WhatsApp/Telegram usando formato de texto enriquecido.
 
-Estructura requerida:
+Estructura requerida (máximo 1-2 frases por bloque y 3 ítems por sección):
 
-**📋 CHANGELOG COMERCIAL - Release {tag_name}**
+**CHANGELOG COMERCIAL - Release {tag_name}**
 
-*🎯 RESUMEN EJECUTIVO*
-[Descripción breve y clara del release en 2-3 líneas]
+Resumen ejecutivo
+[Descripción muy breve y clara del release en 1-2 líneas]
 
-*✨ NUEVAS CARACTERÍSTICAS*
-🟢 [Característica 1]: Descripción clara del valor para el cliente
-🟢 [Característica 2]: Descripción clara del valor para el cliente
+Nuevas características
+🟢 [Característica 1]: Beneficio principal para el cliente en una frase corta
+🟢 [Característica 2]: Beneficio principal para el cliente en una frase corta
 
-*🔧 MEJORAS*
-🔵 [Mejora 1]: Cómo beneficia al usuario
-🔵 [Mejora 2]: Cómo beneficia al usuario
+Mejoras
+🔵 [Mejora 1]: Cómo mejora la experiencia del usuario en una frase corta
+🔵 [Mejora 2]: Cómo mejora la experiencia del usuario en una frase corta
 
-*🐛 CORRECCIONES*
-🟡 [Fix 1]: Problema resuelto en lenguaje simple
-🟡 [Fix 2]: Problema resuelto en lenguaje simple
+Correcciones
+🟡 [Fix 1]: Problema resuelto explicado de forma simple
+🟡 [Fix 2]: Problema resuelto explicado de forma simple
 
-*⚠️ CAMBIOS IMPORTANTES*
+Cambios importantes
 🔴 [Cambio 1]: Qué debe saber el cliente
 🔴 [Cambio 2]: Qué debe saber el cliente
 
-*💡 VALOR APORTADO*
-[Explicación del impacto positivo general del release]
-
-*🎯 OBJETIVOS ALCANZADOS*
-✅ [Objetivo 1]
-✅ [Objetivo 2]
-
-*📌 NOTAS ADICIONALES*
-[Información relevante para comunicar al cliente]
+Valor aportado
+[Explicación muy breve del impacto positivo general del release]
 
 Reglas:
 - NO uses términos técnicos innecesarios
 - Enfócate en el VALOR y BENEFICIOS para el cliente
-- Usa lenguaje claro y profesional
-- Los emojis deben ayudar a identificar rápidamente el tipo de cambio
-- Sé conciso pero informativo"""
+- Usa lenguaje claro, directo y profesional
+- Los emojis de colores (🟢 🔵 🟡 🔴) se usan solo para marcar el tipo de ítem, no en los títulos
+- No incluyas una sección si no hay ítems reales para ella
+- Sé muy conciso, evita párrafos largos"""
         
         # Combine prompt and context
         combined_prompt = f"{prompt}\n\n=== RESUMEN ANALIZADO ===\n\n{context}"
@@ -253,66 +247,67 @@ Reglas:
         
         prompt = f"""Basándote en el análisis de commits proporcionado, genera un CHANGELOG TÉCNICO para el release {tag_name}.
 
-IMPORTANTE: El formato debe ser compatible con WhatsApp/Telegram usando emojis y formato de texto enriquecido.
+IMPORTANTE: El formato debe ser compatible con WhatsApp/Telegram usando formato de texto enriquecido.
 
-Estructura requerida:
+Estructura requerida (máximo 2-3 ítems por sección):
 
-*🔧 CHANGELOG TÉCNICO - Release {tag_name}*
+*CHANGELOG TÉCNICO - Release {tag_name}*
 
-*📊 RESUMEN TÉCNICO*
-[Descripción técnica del release, arquitectura afectada, componentes modificados]
+Resumen técnico
+[Descripción técnica breve del release, arquitectura afectada y componentes principales]
 
-*✨ NUEVAS FUNCIONALIDADES*
-🟢 [Feature 1]: Implementación técnica, APIs, componentes
-🟢 [Feature 2]: Implementación técnica, APIs, componentes
+Nuevas funcionalidades
+🟢 [Feature 1]: Implementación técnica, APIs o componentes clave
+🟢 [Feature 2]: Implementación técnica, APIs o componentes clave
 
-*🔧 MEJORAS TÉCNICAS*
-🔵 [Mejora 1]: Optimizaciones, refactoring, performance
-🔵 [Mejora 2]: Optimizaciones, refactoring, performance
+Mejoras técnicas
+🔵 [Mejora 1]: Optimizaciones, refactoring o mejoras de performance
+🔵 [Mejora 2]: Optimizaciones, refactoring o mejoras de performance
 
-*🐛 BUGS CORREGIDOS*
+Bugs corregidos
 🟡 [Bug 1]: Descripción técnica del problema y solución
 🟡 [Bug 2]: Descripción técnica del problema y solución
 
-*⚠️ BREAKING CHANGES*
-🔴 [Breaking 1]: Cambios que rompen compatibilidad
-🔴 [Breaking 2]: Cambios que rompen compatibilidad
+Breaking changes
+🔴 [Breaking 1]: Cambios que rompen compatibilidad y acciones necesarias
+🔴 [Breaking 2]: Cambios que rompen compatibilidad y acciones necesarias
 
-*🏗️ CAMBIOS DE ARQUITECTURA*
+Cambios de arquitectura
 🟣 [Cambio 1]: Modificaciones estructurales importantes
 🟣 [Cambio 2]: Modificaciones estructurales importantes
 
-*📦 DEPENDENCIAS*
+Dependencias
 [Nuevas dependencias, actualizaciones, deprecaciones]
 
-*⚡ PERFORMANCE*
+Performance
 [Mejoras de rendimiento, optimizaciones]
 
-*🔒 SEGURIDAD*
+Seguridad
 [Parches de seguridad, vulnerabilidades corregidas]
 
-*🧪 TESTING*
-[Nuevos tests, cobertura, mejoras en testing]
+Testing
+[Nuevos tests, cambios relevantes en cobertura o estrategia]
 
-*⚠️ PROBLEMAS CONOCIDOS*
+Problemas conocidos
 [Issues conocidos, limitaciones, workarounds]
 
-*🎯 OBJETIVOS TÉCNICOS ALCANZADOS*
+Objetivos técnicos alcanzados
 ✅ [Objetivo 1]
 ✅ [Objetivo 2]
 
-*💡 VALOR TÉCNICO APORTADO*
+Valor técnico aportado
 [Impacto técnico del release: mantenibilidad, escalabilidad, etc.]
 
-*📝 NOTAS PARA DESARROLLADORES*
-[Información importante para el equipo técnico, migraciones, configuraciones]
+Notas para desarrolladores
+[Información importante para el equipo técnico, migraciones o configuraciones]
 
 Reglas:
-- USA términos técnicos precisos
-- Incluye detalles de implementación relevantes
-- Menciona archivos, funciones, clases modificadas cuando sea relevante
-- Los emojis deben ayudar a identificar rápidamente el tipo de cambio
-- Sé detallado y preciso"""
+- USA términos técnicos precisos pero oraciones claras y relativamente cortas
+- Incluye solo detalles de implementación realmente relevantes
+- Menciona archivos, funciones o clases modificadas solo cuando aporte contexto útil
+- Los emojis de colores se usan solo para marcar el tipo de ítem, no en los títulos
+- No incluyas una sección si no hay ítems reales para ella
+- Sé ordenado y evita texto redundante"""
         
         # Combine prompt and context
         combined_prompt = f"{prompt}\n\n=== RESUMEN ANALIZADO ===\n\n{context}"
